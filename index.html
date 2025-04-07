@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Filtro Rubros y Subsectores</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h2>Filtro de Empresas</h2>
+
+  <label for="rubro">Rubro general:</label>
+  <select id="rubro">
+    <option value="">--Seleccionar--</option>
+  </select>
+
+  <label for="subrubro">Subsector:</label>
+  <select id="subrubro">
+    <option value="">--Seleccionar--</option>
+  </select>
+
+
+  <h2>Selecciona tu Ubicación</h2>
+
+  <label>
+    <input type="checkbox" id="todoPeru"> En todo el Perú
+  </label>
+  <br><br>
+
+  <label for="departamento">Departamento:</label>
+  <select id="departamento" onchange="cargarProvincias()" disabled>
+    <option value="">Cargando departamentos...</option>
+  </select>
+
+  <br><br>
+
+  <label for="provincia">Provincia:</label>
+  <select id="provincia" onchange="cargarDistritos()" disabled>
+    <option value="">Seleccione una provincia</option>
+  </select>
+
+  <br><br>
+
+  <label for="distrito">Distrito:</label>
+  <select id="distrito" disabled>
+    <option value="">Seleccione un distrito</option>
+  </select>
+
+  <br><br>
+  <button id="buscarGPT">🔎 Buscar con GPT</button>
+  <button id="buscarSUNAT">🔍 Buscar con SUNAT</button>
+
+  <h3>📋 Resultados:</h3>
+  <div id="resultados"></div>
+  <script>
+    const rubroSelect = document.getElementById("rubro");
+    const subrubroSelect = document.getElementById("subrubro");
+    let dataMap = {};
+
+    async function cargarExcel() {
+      const response = await fetch("assets/documents/rubros.xlsx");
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { defval: null });
+
+      let ultimoRubro = null;
+      dataMap = {};
+
+      json.forEach(row => {
+        const general = row["CÓDIGO NACE"]?.trim();
+        const especifico = row["SUBNACE O SUBSECTORES"]?.trim();
+
+        if (general) {
+          ultimoRubro = general;
+        }
+
+        if (ultimoRubro && especifico) {
+          if (!dataMap[ultimoRubro]) {
+            dataMap[ultimoRubro] = [];
+          }
+          dataMap[ultimoRubro].push(especifico);
+        }
+      });
+
+      // Llenar el primer select
+      rubroSelect.innerHTML = '<option value="">--Seleccionar--</option>';
+      Object.keys(dataMap).forEach(rubro => {
+        const opt = document.createElement("option");
+        opt.value = rubro;
+        opt.textContent = rubro;
+        rubroSelect.appendChild(opt);
+      });
+    }
+
+    rubroSelect.addEventListener("change", function () {
+      const selected = rubroSelect.value;
+      const subrubros = dataMap[selected] || [];
+
+      subrubroSelect.innerHTML = '<option value="">--Seleccionar--</option>';
+      subrubros.forEach(sub => {
+        const opt = document.createElement("option");
+        opt.value = sub;
+        opt.textContent = sub;
+        subrubroSelect.appendChild(opt);
+      });
+    });
+
+    cargarExcel();
+  </script>
+  <script>
+    let ubigeos = {};
+
+    async function cargarDatos() {
+      try {
+        const res = await fetch('assets/ubigeos/map.pe.json');
+        ubigeos = await res.json();
+
+        const departamentoSelect = document.getElementById("departamento");
+        departamentoSelect.innerHTML = '<option value="">Seleccione un departamento</option>';
+
+        Object.keys(ubigeos).forEach(departamento => {
+          let option = document.createElement("option");
+          option.value = departamento;
+          option.textContent = departamento;
+          departamentoSelect.appendChild(option);
+        });
+
+        departamentoSelect.disabled = false;
+      } catch (error) {
+        console.error("Error cargando el JSON:", error);
+      }
+    }
+
+    function cargarProvincias() {
+      const departamento = document.getElementById("departamento").value;
+      const provinciaSelect = document.getElementById("provincia");
+      const distritoSelect = document.getElementById("distrito");
+
+      provinciaSelect.innerHTML = '<option value="">Seleccione una provincia</option>';
+      distritoSelect.innerHTML = '<option value="">Seleccione un distrito</option>';
+      distritoSelect.disabled = true;
+
+      if (departamento && ubigeos[departamento]) {
+        Object.keys(ubigeos[departamento]).forEach(provincia => {
+          let option = document.createElement("option");
+          option.value = provincia;
+          option.textContent = provincia;
+          provinciaSelect.appendChild(option);
+        });
+        provinciaSelect.disabled = false;
+      }
+    }
+
+    function cargarDistritos() {
+      const departamento = document.getElementById("departamento").value;
+      const provincia = document.getElementById("provincia").value;
+      const distritoSelect = document.getElementById("distrito");
+
+      distritoSelect.innerHTML = '<option value="">Seleccione un distrito</option>';
+
+      if (departamento && provincia && ubigeos[departamento][provincia]) {
+        Object.keys(ubigeos[departamento][provincia]).forEach(distrito => {
+          let option = document.createElement("option");
+          option.value = ubigeos[departamento][provincia][distrito]; // Código
+          option.textContent = distrito;
+          distritoSelect.appendChild(option);
+        });
+        distritoSelect.disabled = false;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const checkbox = document.getElementById("todoPeru");
+      const departamento = document.getElementById("departamento");
+      const provincia = document.getElementById("provincia");
+      const distrito = document.getElementById("distrito");
+
+      checkbox.addEventListener("change", function () {
+        const disabled = this.checked;
+        departamento.disabled = disabled;
+        provincia.disabled = disabled;
+        distrito.disabled = disabled;
+
+        if (disabled) {
+          departamento.value = "";
+          provincia.value = "";
+          distrito.value = "";
+
+          provincia.innerHTML = '<option value="">Seleccione una provincia</option>';
+          distrito.innerHTML = '<option value="">Seleccione un distrito</option>';
+        }
+      });
+    });
+    window.onload = cargarDatos;
+  </script>
+  <script>
+    function obtenerFiltros() {
+      const rubro = document.getElementById("rubro").value.trim();
+      const subrubro = document.getElementById("subrubro").value.trim();
+      const todoPeru = document.getElementById("todoPeru").checked;
+  
+      let ubicacion = null;
+      if (!todoPeru) {
+        const dpto = document.getElementById("departamento").value.trim();
+        const prov = document.getElementById("provincia").value.trim();
+        const dist = document.getElementById("distrito").value.trim();
+        ubicacion = [dpto, prov, dist].filter(x => x).join(" / ");
+      } else {
+        ubicacion = "Todo el Perú";
+      }
+  
+      return { rubro, subrubro, todoPeru, ubicacion };
+    }
+  
+    function validarFiltros({ rubro, ubicacion, todoPeru }) {
+      if (!rubro) {
+        alert("⚠️ Debes seleccionar al menos un rubro.");
+        return false;
+      }
+  
+      if (!todoPeru && !ubicacion) {
+        alert("⚠️ Debes seleccionar una ubicación o marcar 'Todo el Perú'.");
+        return false;
+      }
+  
+      return true;
+    }
+  
+    function mostrarResultados(resultados) {
+      const contenedor = document.getElementById("resultados");
+      contenedor.innerHTML = "";
+  
+      if (!resultados || resultados.length === 0) {
+        contenedor.innerHTML = "<p>No se encontraron resultados.</p>";
+        return;
+      }
+  
+      const tabla = document.createElement("table");
+      tabla.border = "1";
+      tabla.style.borderCollapse = "collapse";
+      tabla.style.marginTop = "10px";
+  
+      const header = `
+        <tr>
+          <th>Nombre</th>
+          <th>RUC</th>
+          <th>Web</th>
+          <th>Contacto</th>
+          <th>¿Certificado ISO?</th>
+        </tr>`;
+      tabla.innerHTML = header;
+  
+      resultados.forEach(item => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${item.nombre}</td>
+          <td>${item.ruc || "N/A"}</td>
+          <td><a href="${item.web}" target="_blank">${item.web || "N/A"}</a></td>
+          <td>${item.contacto || "N/A"}</td>
+          <td>${item.iso}</td>
+        `;
+        tabla.appendChild(fila);
+      });
+  
+      contenedor.appendChild(tabla);
+    }
+  
+    async function enviarAFuente(nombreFuente) {
+      const filtros = obtenerFiltros();
+      if (!validarFiltros(filtros)) return;
+  
+      // Define aquí la URL del webhook de n8n según fuente
+      const urls = {
+        gpt: "https://tomasg9806.app.n8n.cloud/webhook-test/gpt-certico",
+        sunat: "https://tu-servidor-n8n.com/webhook/sunat"
+      };
+  
+      try {
+        const response = await fetch(urls[nombreFuente], {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(filtros)
+        });
+  
+        const data = await response.json();
+  
+        if (data && Array.isArray(data.resultados)) {
+          mostrarResultados(data.resultados);
+        } else {
+          alert("❌ Respuesta inválida del servidor.");
+        }
+      } catch (error) {
+        console.error("Error al contactar con n8n:", error);
+        alert("❌ Error al buscar empresas.");
+      }
+    }
+  
+    document.getElementById("buscarGPT").addEventListener("click", () => enviarAFuente("gpt"));
+    document.getElementById("buscarSUNAT").addEventListener("click", () => enviarAFuente("sunat"));
+  </script>
+  
+</body>
+</html>

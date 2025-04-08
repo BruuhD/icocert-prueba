@@ -23,7 +23,7 @@
   <h2>Selecciona tu Ubicación</h2>
 
   <label>
-    <input type="checkbox" id="todoPeru"> En todo el Perú
+    <input type="checkbox" id="todoPeru"> En todo el Peru
   </label>
   <br><br>
 
@@ -207,7 +207,7 @@
         const dist = document.getElementById("distrito").value.trim();
         ubicacion = [dpto, prov, dist].filter(x => x).join(" / ");
       } else {
-        ubicacion = "Perú";
+        ubicacion = "Peru";
       }
   
       return { rubro, subrubro, todoPeru, ubicacion };

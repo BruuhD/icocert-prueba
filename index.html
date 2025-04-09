@@ -177,42 +177,53 @@ document.addEventListener("DOMContentLoaded", function () {
     function mostrarResultados(resultados) {
       const contenedor = document.getElementById("resultados");
       contenedor.innerHTML = "";
-  
+
       if (!resultados || resultados.length === 0) {
         contenedor.innerHTML = "<p>No se encontraron resultados.</p>";
         return;
       }
-  
+
       const tabla = document.createElement("table");
       tabla.border = "1";
       tabla.style.borderCollapse = "collapse";
       tabla.style.marginTop = "10px";
-  
+      tabla.style.width = "100%";
+
       const header = `
         <tr>
           <th>Nombre</th>
           <th>RUC</th>
           <th>Web</th>
+          <th>Correo</th>
           <th>Contacto</th>
+          <th>Zona</th>
+          <th>Dirección</th>
           <th>¿Certificado ISO?</th>
+          <th>Tipo ISO</th>
+          <th>Resumen</th>
         </tr>`;
       tabla.innerHTML = header;
-  
+
       resultados.forEach(item => {
         const fila = document.createElement("tr");
         fila.innerHTML = `
-          <td>${item.nombre}</td>
+          <td>${item.nombre || "N/A"}</td>
           <td>${item.ruc || "N/A"}</td>
-          <td><a href="${item.web}" target="_blank">${item.web || "N/A"}</a></td>
-          <td>${item.contacto || "N/A"}</td>
-          <td>${item.iso}</td>
+          <td><a href="${item.paginaWeb || item.web || '#'}" target="_blank">${item.paginaWeb || item.web || "N/A"}</a></td>
+          <td>${item.correo || "N/A"}</td>
+          <td>${item.telefono || item.contacto || "N/A"}</td>
+          <td>${item.zona || "N/A"}</td>
+          <td>${item.direccion || "N/A"}</td>
+          <td>${item.tieneISO || item.iso || "No se puede saber"}</td>
+          <td>${item.tipoISO || "N/A"}</td>
+          <td>${item.resumen || "N/A"}</td>
         `;
         tabla.appendChild(fila);
       });
-  
+
       contenedor.appendChild(tabla);
     }
-  
+
     async function enviarAFuente(nombreFuente) {
       const filtros = obtenerFiltros();
       if (!validarFiltros(filtros)) return;

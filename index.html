@@ -23,28 +23,18 @@
   <h2>Selecciona tu Ubicación</h2>
 
   <label>
-    <input type="checkbox" id="todoPeru"> En todo el Peru
+    <input type="checkbox" id="todoPeru"> En todo el Perú
   </label>
   <br><br>
-
-  <label for="departamento">Departamento:</label>
-  <select id="departamento" onchange="cargarProvincias()" disabled>
-    <option value="">Cargando departamentos...</option>
-  </select>
-
-  <br><br>
-
-  <label for="provincia">Provincia:</label>
-  <select id="provincia" onchange="cargarDistritos()" disabled>
-    <option value="">Seleccione una provincia</option>
-  </select>
-
-  <br><br>
-
-  <label for="distrito">Distrito:</label>
-  <select id="distrito" disabled>
-    <option value="">Seleccione un distrito</option>
-  </select>
+  
+  <label for="ubicacionInput">Departamento o Distrito:</label>
+  <input list="ubicacionList" id="ubicacionInput" disabled placeholder="Ej. Lima, Miraflores" />
+  
+  <datalist id="ubicacionList">
+    <!-- Se llenará dinámicamente -->
+  </datalist>
+  
+  
 
   <br><br>
   <button id="buscarGPT">🔎 Buscar con GPT</button>
@@ -111,88 +101,53 @@
   <script>
     let ubigeos = {};
 
-    async function cargarDatos() {
+    async function cargarDatosUbicacion() {
       try {
         const res = await fetch('assets/ubigeos/map.pe.json');
         ubigeos = await res.json();
 
-        const departamentoSelect = document.getElementById("departamento");
-        departamentoSelect.innerHTML = '<option value="">Seleccione un departamento</option>';
+        const ubicacionInput = document.getElementById("ubicacionInput");
+        const ubicacionList = document.getElementById("ubicacionList");
+        ubicacionList.innerHTML = "";
 
         Object.keys(ubigeos).forEach(departamento => {
-          let option = document.createElement("option");
-          option.value = departamento;
-          option.textContent = departamento;
-          departamentoSelect.appendChild(option);
+          // Opción de solo departamento
+          const opt = document.createElement("option");
+          opt.value = departamento; // Lima
+          ubicacionList.appendChild(opt);
+
+          // Opciones de distritos
+          Object.keys(ubigeos[departamento]).forEach(provincia => {
+            Object.keys(ubigeos[departamento][provincia]).forEach(distrito => {
+              const display = `${distrito}, ${departamento}`; // El Porvenir, La Libertad
+              const opt = document.createElement("option");
+              opt.value = display;
+              ubicacionList.appendChild(opt);
+            });
+          });
         });
 
-        departamentoSelect.disabled = false;
+        ubicacionInput.disabled = false;
       } catch (error) {
-        console.error("Error cargando el JSON:", error);
+        console.error("Error cargando ubicaciones:", error);
       }
     }
 
-    function cargarProvincias() {
-      const departamento = document.getElementById("departamento").value;
-      const provinciaSelect = document.getElementById("provincia");
-      const distritoSelect = document.getElementById("distrito");
 
-      provinciaSelect.innerHTML = '<option value="">Seleccione una provincia</option>';
-      distritoSelect.innerHTML = '<option value="">Seleccione un distrito</option>';
-      distritoSelect.disabled = true;
+document.addEventListener("DOMContentLoaded", function () {
+  const checkbox = document.getElementById("todoPeru");
+  const ubicacionSelect = document.getElementById("ubicacionSelect");
 
-      if (departamento && ubigeos[departamento]) {
-        Object.keys(ubigeos[departamento]).forEach(provincia => {
-          let option = document.createElement("option");
-          option.value = provincia;
-          option.textContent = provincia;
-          provinciaSelect.appendChild(option);
-        });
-        provinciaSelect.disabled = false;
-      }
+  checkbox.addEventListener("change", function () {
+    ubicacionInput.disabled = this.checked;
+    if (this.checked) {
+      ubicacionInput.value = "";
     }
+  });
 
-    function cargarDistritos() {
-      const departamento = document.getElementById("departamento").value;
-      const provincia = document.getElementById("provincia").value;
-      const distritoSelect = document.getElementById("distrito");
+  cargarDatosUbicacion();
+});
 
-      distritoSelect.innerHTML = '<option value="">Seleccione un distrito</option>';
-
-      if (departamento && provincia && ubigeos[departamento][provincia]) {
-        Object.keys(ubigeos[departamento][provincia]).forEach(distrito => {
-          let option = document.createElement("option");
-          option.value = ubigeos[departamento][provincia][distrito]; // Código
-          option.textContent = distrito;
-          distritoSelect.appendChild(option);
-        });
-        distritoSelect.disabled = false;
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-      const checkbox = document.getElementById("todoPeru");
-      const departamento = document.getElementById("departamento");
-      const provincia = document.getElementById("provincia");
-      const distrito = document.getElementById("distrito");
-
-      checkbox.addEventListener("change", function () {
-        const disabled = this.checked;
-        departamento.disabled = disabled;
-        provincia.disabled = disabled;
-        distrito.disabled = disabled;
-
-        if (disabled) {
-          departamento.value = "";
-          provincia.value = "";
-          distrito.value = "";
-
-          provincia.innerHTML = '<option value="">Seleccione una provincia</option>';
-          distrito.innerHTML = '<option value="">Seleccione un distrito</option>';
-        }
-      });
-    });
-    window.onload = cargarDatos;
   </script>
   <script>
     function obtenerFiltros() {
@@ -200,16 +155,8 @@
       const subrubro = document.getElementById("subrubro").value.trim();
       const todoPeru = document.getElementById("todoPeru").checked;
   
-      let ubicacion = null;
-      if (!todoPeru) {
-        const dpto = document.getElementById("departamento").value.trim();
-        const prov = document.getElementById("provincia").value.trim();
-        const dist = document.getElementById("distrito").value.trim();
-        ubicacion = [dpto, prov, dist].filter(x => x).join(" / ");
-      } else {
-        ubicacion = "Peru";
-      }
-  
+      let ubicacion = todoPeru ? "Todo el Perú" : document.getElementById("ubicacionInput").value.trim();
+
       return { rubro, subrubro, todoPeru, ubicacion };
     }
   
@@ -273,7 +220,7 @@
       // Define aquí la URL del webhook de n8n según fuente
       const urls = {
         gpt: "https://tomasg9806.app.n8n.cloud/webhook-test/gpt-certico",
-        sunat: "https://tomasg9806.app.n8n.cloud/webhook-test/buscar-empresas"
+        sunat: "https://tu-servidor-n8n.com/webhook/sunat"
       };
   
       try {

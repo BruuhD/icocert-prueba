@@ -192,14 +192,10 @@ document.addEventListener("DOMContentLoaded", function () {
       const header = `
         <tr>
           <th>Nombre</th>
-          <th>RUC</th>
           <th>Web</th>
-          <th>Correo</th>
           <th>Contacto</th>
           <th>Zona</th>
           <th>Dirección</th>
-          <th>¿Certificado ISO?</th>
-          <th>Tipo ISO</th>
           <th>Resumen</th>
         </tr>`;
       tabla.innerHTML = header;
@@ -208,14 +204,10 @@ document.addEventListener("DOMContentLoaded", function () {
         const fila = document.createElement("tr");
         fila.innerHTML = `
           <td>${item.nombre || "N/A"}</td>
-          <td>${item.ruc || "N/A"}</td>
           <td><a href="${item.paginaWeb || item.web || '#'}" target="_blank">${item.paginaWeb || item.web || "N/A"}</a></td>
-          <td>${item.correo || "N/A"}</td>
           <td>${item.telefono || item.contacto || "N/A"}</td>
           <td>${item.zona || "N/A"}</td>
           <td>${item.direccion || "N/A"}</td>
-          <td>${item.tieneISO || item.iso || "No se puede saber"}</td>
-          <td>${item.tipoISO || "N/A"}</td>
           <td>${item.resumen || "N/A"}</td>
         `;
         tabla.appendChild(fila);
